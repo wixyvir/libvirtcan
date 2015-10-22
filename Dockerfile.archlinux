@@ -1,0 +1,20 @@
+FROM base/archlinux
+
+# Deprecated, for tests with archlinux only
+
+MAINTAINER  Cyprien DIOT <cyprien.diot@pmsipilot.com>
+RUN pacman -Sy --noconfirm --noprogressbar archlinux-keyring
+RUN pacman -Syu --noconfirm --noprogressbar
+RUN pacman-db-upgrade
+RUN pacman -Sy --noconfirm --noprogressbar libvirt
+RUN echo [archlinuxfr] >> /etc/pacman.conf ; echo SigLevel = Never >> /etc/pacman.conf ; echo 'Server = http://repo.archlinux.fr/$arch' >> /etc/pacman.conf ;
+RUN pacman -Sy --noconfirm --noprogressbar yaourt rsync sudo elfkickers
+COPY resources/sudoers /etc/sudoers
+RUN chmod 440 /etc/sudoers
+RUN useradd -G wheel yaourt
+RUN sudo -u yaourt yaourt -S --noconfirm libguestfs
+
+
+
+
+
