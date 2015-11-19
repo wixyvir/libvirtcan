@@ -3,7 +3,8 @@
 import logging
 
 def parser(subparser):
-    subparser.add_argument('--flavour', help='Flavour name', required=True)
+    subparser.add_argument('--flavour', help='Flavour name')
+    subparser.add_argument('--dsize', help='Disk maximum size in GB')
 
 
 def getFlavourDiskSize(flavour):
@@ -30,8 +31,8 @@ def populateImageDiskInfos(mgr):
     import sh, re
     qemu = sh.Command('qemu-img')
     regexFormat = re.compile(r"^file format: (\w+)$", re.M)
-    regexDiskSize = re.compile(r"^disk size: (\d+)G", re.M)
-    regexVDiskSize = re.compile(r"^virtual size: (\d+)G", re.M)
+    regexDiskSize = re.compile(r"^disk size: ([\d\.]+)G", re.M)
+    regexVDiskSize = re.compile(r"^virtual size: ([\d\.]+)G", re.M)
     logger = logging.getLogger('virtimg')
     for img in mgr:
         info = str(qemu('info', img.path))
@@ -102,18 +103,24 @@ def resizePartImage(img, partid, size):
 
 def run(mgr, namespace):
     logger = logging.getLogger('virtimg')
-    flavourDiskSize = getFlavourDiskSize(namespace.flavour)
+    if namespace.dsize is not None:
+        flavourDiskSize = int(namespace.dsize)
+    elif namespace.flavour is not None:
+        flavourDiskSize = getFlavourDiskSize(namespace.flavour)
+    else:
+        logger.warn("Please provide --flavour or --dsize parameters")
+        return
     populateImageDiskInfos(mgr)
     for img in mgr:
         img.toFlavour = False
         logger.info("%s: Checking image requirements", img.name)
-        if int(img.vDiskSize) <= flavourDiskSize:
+        if float(img.vDiskSize) <= flavourDiskSize:
             logger.warn("%s: virtual disk size small enough: toFlavour ignored", img.name)
             continue
-        if int(img.diskSize) >= flavourDiskSize:
+        if float(img.diskSize) >= flavourDiskSize:
             logger.warn("%s: disk size too big: toFlavour ignored", img.name)
             continue
-        img.spaceToRemove = (int(img.vDiskSize) - flavourDiskSize)*1024*1024
+        img.spaceToRemove = (float(img.vDiskSize) - flavourDiskSize)*1024*1024
         populateImageParts(img)
         if int(img.parts[img.lastpart]["free"]) < img.spaceToRemove:
             logger.warn("%s: not enough space on /dev/sda%s: toFlavour ignored", img.name, str(img.lastpart))

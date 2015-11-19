@@ -1,4 +1,4 @@
-# manage-virt-img docker image
+# libvirtcan docker image
 
 This Dockerfile builds a docker image for OpenStack/libvirt images management.
 
